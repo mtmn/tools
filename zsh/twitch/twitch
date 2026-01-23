@@ -1,0 +1,54 @@
+#!/bin/zsh
+TWITCH_CHANNELS_FILE="$HOME/.config/twitch/channels"
+
+tww() {
+	local channel="${1?Usage: tww <channel>}"
+	mpv "https://twitch.tv/$channel" --no-terminal --no-resume-playback & disown
+}
+
+twe() {
+	$EDITOR $TWITCH_CHANNELS_FILE
+}
+
+tw() {
+	[[ -f "$TWITCH_CHANNELS_FILE" ]] || return 1
+	local list_mode=0
+	if [[ "$1" == "--list" ]]; then
+		list_mode=1
+	fi
+
+	local -a channels descriptions
+	while read line; do
+		[[ -z "$line" ]] && continue
+		local channel=$(echo "$line" | awk '{print $1}')
+		local description=$(echo "$line" | cut -d' ' -f2-)
+		if [[ "$description" == "$channel" ]]; then
+			description=""
+		fi
+		channels+=("$channel")
+		descriptions+=("$description")
+	done <"$TWITCH_CHANNELS_FILE"
+
+	if [[ $list_mode -eq 1 ]]; then
+		for ((i = 1; i <= $#channels; i++)); do
+			if [[ -n "${descriptions[$i]}" ]]; then
+				echo "${channels[$i]} (${descriptions[$i]})"
+			else
+				echo "${channels[$i]}"
+			fi
+		done
+	else
+		for ((i = 1; i <= $#channels; i++)); do
+			echo "${channels[$i]}" "${descriptions[$i]}"
+		done | parallel --colsep ' ' -j 10 'channel={1}; description={2}; if curl -s "https://www.twitch.tv/$channel" | grep -q "isLiveBroadcast"; then status_text="is online"; else status_text="is offline"; fi; if [[ -n "$description" ]]; then echo "$channel ($description) $status_text"; else echo "$channel $status_text"; fi' | grep "online"
+	fi
+}
+_twitch_completion() {
+	local channels
+	if [[ -f "$TWITCH_CHANNELS_FILE" ]]; then
+		channels=(${(f)"$(awk '{print $1}' $TWITCH_CHANNELS_FILE)"})
+		_describe 'twitch channels' channels
+	fi
+}
+
+compdef _twitch_completion tww

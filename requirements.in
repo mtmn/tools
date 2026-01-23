@@ -1,0 +1,6 @@
+fire==0.7.1
+numpy==2.4.1
+pillow==12.1.0
+paramiko==4.0.0
+mutagen==1.47.0
+requests==2.32.5
