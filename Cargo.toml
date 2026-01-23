@@ -1,0 +1,3 @@
+[workspace]
+members = ["alafont", "diffamer", "f2aif", "gotcha", "hakunadata", "mack", "magnolia", "plants-client", "plants-common", "plants-daemon", "scores", "virittaa"]
+resolver = "3"

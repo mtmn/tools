@@ -1,0 +1,14 @@
+[package]
+name = "f2aif"
+version = "1.0.0"
+edition = "2024"
+
+[dependencies]
+clap = { version = "4.4", features = ["derive"] }
+rayon = "1.8"
+walkdir = "2.4"
+num_cpus = "1.16"
+anyhow = "1.0"
+symphonia = { version = "0.5", features = ["flac"] }
+hound = "3.5"
+id3 = "1.13"
