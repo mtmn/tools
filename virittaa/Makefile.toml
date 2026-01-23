@@ -1,0 +1,35 @@
+[tasks.audit]
+command = "cargo"
+args = ["audit", "--color", "always"]
+
+[tasks.clippy]
+command = "cargo"
+args = ["clippy", "--", "-W", "clippy::pedantic"]
+
+[tasks.format]
+command = "cargo"
+args = ["fmt", "--", "--emit=files"]
+
+[tasks.test]
+command = "cargo"
+args = ["test"]
+
+[tasks.build]
+command = "cargo"
+args = ["build"]
+
+[tasks.build-release]
+command = "cargo"
+args = ["build", "--release"]
+
+[tasks.install]
+command = "cargo"
+args = ["install", "--path", "."]
+
+[tasks.checks]
+dependencies = [
+    "clippy",
+    "format",
+    "audit",
+    "test"
+]
