@@ -23,14 +23,14 @@ bazel query "kind('sh_binary', //...)"
 
 ### build
 ```bash
-bazel build //magnolia
+bazel build //hakunadata
 ```
 
 ### deploy 
 > `bazel-bin` -> ``/opt/bazel-tools``
 ```bash
 sudo install -d -m 700 -o $USER /opt/bazel-tools
-bazel run //magnolia:deploy
+bazel run //hakunadata:deploy
 ```
 
 ### misc
