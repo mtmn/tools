@@ -1,0 +1,65 @@
+#!/bin/bash
+set -euo pipefail
+
+usage() {
+	echo "Usage: $0 --repo <url> --branch <branch> --prefix <path>"
+	exit 1
+}
+
+cleanup() {
+	[ -n "${upstream_dir:-}" ] && rm -rf "$upstream_dir" && git remote remove "$remote_name"
+}
+trap cleanup EXIT
+
+repo_url=""
+branch=""
+prefix=""
+
+while [[ "$#" -gt 0 ]]; do
+	case $1 in
+	--repo)
+		repo_url="$2"
+		shift
+		;;
+	--branch)
+		branch="$2"
+		shift
+		;;
+	--prefix)
+		prefix="$2"
+		shift
+		;;
+	*)
+		echo "Unknown parameter: $1"
+		usage
+		;;
+	esac
+	shift
+done
+
+[ -z "$repo_url" ] || [ -z "$branch" ] || [ -z "$prefix" ] && usage
+
+# Normalize prefix and vars
+clean_prefix=${prefix%/}
+remote_name="${clean_prefix}.upstream"
+upstream_dir="${clean_prefix}.upstream"
+
+cd "$(git rev-parse --show-toplevel)"
+
+if ! git remote | grep -q "^${remote_name}$"; then
+	git remote add -f "$remote_name" "$repo_url"
+else
+	git fetch "$remote_name"
+fi
+
+[ -d "$upstream_dir" ] && rm -rf "$upstream_dir"
+mkdir -p "$upstream_dir"
+
+git archive --format=tar "${remote_name}/${branch}" | tar -xf - -C "$upstream_dir"
+
+if ! command -v difft &>/dev/null; then
+	echo "Error: difft (difftastic) not found." >&2
+	exit 1
+fi
+
+difft --color=always "$clean_prefix" "$upstream_dir" | less -R
