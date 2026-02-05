@@ -34,7 +34,6 @@ crate.from_cargo(
     manifests = [
         "//:alafont/Cargo.toml",
         "//:diffamer/Cargo.toml",
-        "//:f2aif/Cargo.toml",
         "//:gotcha/Cargo.toml",
         "//:hakunadata/Cargo.toml",
         "//:mack/Cargo.toml",
