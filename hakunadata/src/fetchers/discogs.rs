@@ -53,7 +53,6 @@ impl DiscogsClient {
             .context("Failed to send Discogs request")?;
 
         if !response.status().is_success() {
-            // If 401/403, maybe warn user?
             if response.status() == reqwest::StatusCode::UNAUTHORIZED {
                 use std::sync::atomic::{AtomicBool, Ordering};
                 static WARNED: AtomicBool = AtomicBool::new(false);
