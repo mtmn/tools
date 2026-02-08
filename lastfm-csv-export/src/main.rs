@@ -161,9 +161,6 @@ fn write_csv(path: &str, tracks: &[Track]) -> Result<(), Box<dyn Error>> {
     let file = File::create(path)?;
     let mut writer = Writer::from_writer(file);
 
-    // Write empty header row as Maloja doesn't expect it
-    writer.write_record(["", "", "", ""])?;
-
     for track in tracks {
         let date_str = track
             .date
