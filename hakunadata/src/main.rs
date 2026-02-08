@@ -1,14 +1,33 @@
+mod context;
 mod fetchers;
 mod metadata;
+mod tagging;
 
 use anyhow::{Context, Result};
 use clap::Parser;
+use context::AppContext;
 use fetchers::discogs::DiscogsClient;
 use fetchers::musicbrainz::MusicBrainzClient;
+use metadata::fetch::process_query;
+use std::path::Path;
+use tagging::{print_metadata, process_file};
+use walkdir::WalkDir;
 
-const EXAMPLES: &str = r"EXAMPLES:
+static EXAMPLES: &str = r"EXAMPLES:
     Fetch metadata for an artist and album:
-    hakunadata 'Nirvana' 'Nevermind'";
+    hakunadata --artist 'Djrum' --album 'Under Tangled Silence'
+
+    Preview tags for a single file:
+    hakunadata --read file.mp3
+
+    Write tags to a single file:
+    hakunadata --write file.mp3
+
+    Show proposed tags for all files in a directory:
+    hakunadata --read /path/to/music
+
+    Write tags to all files in a directory:
+    hakunadata --write /path/to/music";
 
 #[derive(Parser, Debug)]
 #[command(
@@ -20,15 +39,24 @@ const EXAMPLES: &str = r"EXAMPLES:
 )]
 struct Args {
     /// Artist name
-    artist: String,
+    #[arg(long)]
+    artist: Option<String>,
 
     /// Album name
-    album: String,
-}
+    #[arg(long)]
+    album: Option<String>,
 
-struct AppContext {
-    mb_client: Option<MusicBrainzClient>,
-    discogs_client: Option<DiscogsClient>,
+    /// File(s) to process
+    #[arg(required_unless_present_any = ["artist", "album"])]
+    files: Vec<String>,
+
+    /// Write tags to file
+    #[arg(short, long, default_value_t = false)]
+    write: bool,
+
+    /// Read tags from file and show what would be written
+    #[arg(short, long, default_value_t = true)]
+    read: bool,
 }
 
 #[tokio::main]
@@ -52,105 +80,42 @@ async fn main() -> Result<()> {
         discogs_client,
     };
 
-    let result = process_query(&ctx, &args.artist, &args.album).await?;
+    if !args.files.is_empty() {
+        for path_str in args.files {
+            let path = Path::new(&path_str);
+            if !path.exists() {
+                eprintln!("Path does not exist: {}", path.display());
+                continue;
+            }
 
-    if result.genres.is_empty() {
-        println!("Genres: (none)");
-    } else {
-        println!("Genres:");
-        for genre in &result.genres {
-            println!("  {genre}");
-        }
-    }
+            let mut files_to_process = Vec::new();
+            if path.is_dir() {
+                // Fix redundant_closure: |e| e.ok() -> Result::ok
+                for entry in WalkDir::new(path).into_iter().filter_map(Result::ok) {
+                    if entry.file_type().is_file()
+                        && entry
+                            .path()
+                            .extension()
+                            .and_then(|s| s.to_str())
+                            .is_some_and(|ext| matches!(ext, "flac" | "mp3" | "ogg" | "m4a"))
+                    {
+                        files_to_process.push(entry.path().to_path_buf());
+                    }
+                }
+            } else {
+                files_to_process.push(path.to_path_buf());
+            }
 
-    if result.subgenres.is_empty() {
-        println!("Subgenres: (none)");
-    } else {
-        println!("Subgenres:");
-        for subgenre in &result.subgenres {
-            println!("  {subgenre}");
+            for file_path in files_to_process {
+                if let Err(e) = process_file(&ctx, &file_path, args.read, args.write).await {
+                    eprintln!("Failed to process file {}: {e:?}", file_path.display());
+                }
+            }
         }
-    }
-
-    if result.labels.is_empty() {
-        println!("Label: (none)");
-    } else {
-        println!("Label:");
-        for label in &result.labels {
-            println!("  {label}");
-        }
+    } else if let (Some(artist), Some(album)) = (args.artist, args.album) {
+        let result = process_query(&ctx, &artist, &album).await?;
+        print_metadata(&result);
     }
 
     Ok(())
-}
-
-struct FetchedMetadata {
-    genres: Vec<String>,
-    subgenres: Vec<String>,
-    labels: Vec<String>,
-}
-
-async fn process_query(ctx: &AppContext, artist: &str, album: &str) -> Result<FetchedMetadata> {
-    // Run fetchers concurrently (or rather, run whichever is enabled)
-    let discogs_future = async {
-        if let Some(client) = &ctx.discogs_client {
-            client.fetch_metadata(artist, album).await
-        } else {
-            Ok(None)
-        }
-    };
-
-    let mb_future = async {
-        if let Some(client) = &ctx.mb_client {
-            client.fetch_genres(artist, album).await
-        } else {
-            Ok(vec![])
-        }
-    };
-
-    let (discogs_res, mb_res) = tokio::join!(discogs_future, mb_future);
-
-    let mut genres = std::collections::HashSet::new();
-    let mut subgenres = std::collections::HashSet::new();
-    let mut labels = std::collections::HashSet::new();
-
-    // Process Discogs
-    if let Ok(Some(data)) = discogs_res {
-        let g = metadata::genres::process(&data);
-        for item in g {
-            genres.insert(item);
-        }
-
-        let s = metadata::subgenres::process(&data);
-        for item in s {
-            subgenres.insert(item);
-        }
-
-        let l = metadata::labels::process(&data);
-        for item in l {
-            labels.insert(item);
-        }
-    }
-
-    // Process MusicBrainz
-    if let Ok(mb_genres) = mb_res {
-        for g in mb_genres {
-            genres.insert(g);
-        }
-    }
-
-    let mut sorted_genres: Vec<_> = genres.into_iter().collect();
-    sorted_genres.sort();
-
-    let mut sorted_subgenres: Vec<_> = subgenres.into_iter().collect();
-    sorted_subgenres.sort();
-
-    let mut sorted_labels: Vec<_> = labels.into_iter().collect();
-    sorted_labels.sort();
-
-    Ok(FetchedMetadata {
-        genres: sorted_genres,
-        subgenres: sorted_subgenres,
-        labels: sorted_labels,
-    })
 }
