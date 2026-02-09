@@ -36,11 +36,7 @@ crate.from_cargo(
         "//:diffamer/Cargo.toml",
         "//:gotcha/Cargo.toml",
         "//:hakunadata/Cargo.toml",
-        "//:mack/Cargo.toml",
-        "//:scores/Cargo.toml",
-        "//:virittaa/Cargo.toml",
         "//:lastfm-csv-export/Cargo.toml",
-        "//:matchakey/Cargo.toml",
     ],
 )
 use_repo(crate, "crates")
