@@ -1,0 +1,51 @@
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
+let
+  homeDir = config.home.homeDirectory;
+in
+{
+  home.packages = with pkgs; [
+    ripgrep
+    fd
+    sd
+    bc
+    ncdu
+    moreutils
+    eza
+    coreutils-full
+    gnugrep
+    gnumake
+    gnupg
+    gnused
+    gnutar
+    curl
+    gawk
+    tree
+    watch
+    wget
+    jq
+    just
+    shellcheck
+    xdg-utils
+    nushell
+    cmake
+    xz
+    nil
+    nixpkgs-fmt
+    alejandra
+    poppler-utils
+    imagemagick
+    rclone
+    gnuplot
+    atop
+    btop
+    strace
+    nixfmt
+    knot-dns
+    comma
+  ];
+}

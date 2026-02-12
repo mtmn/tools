@@ -1,0 +1,14 @@
+#!/bin/bash
+
+declare -A resources=(
+	["tools"]="tools"
+	["magnolia"]="magnolia"
+)
+
+resource_name="module.github.github_repository.repo"
+terraform_path='/usr/sbin/tofu'
+
+for resource in "${!resources[@]}"; do
+	imported_name="${resources[$resource]}"
+	$terraform_path import "${resource_name}[\"$resource\"]" "$imported_name"
+done
