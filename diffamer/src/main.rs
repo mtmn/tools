@@ -23,6 +23,8 @@ struct Cli {
     same_as_local: bool,
 
     #[arg(long)]
+    reverse: bool,
+
     #[arg(long)]
     sync: bool,
 }
@@ -40,25 +42,37 @@ struct FileSyncWorker {
     local_path: PathBuf,
     remote_path: PathBuf,
     sync: bool,
+    reverse: bool,
 }
 
 impl FileSyncWorker {
-    fn new(host_alias: String, local_path: PathBuf, remote_path: PathBuf, sync: bool) -> Self {
+    fn new(
+        host_alias: String,
+        local_path: PathBuf,
+        remote_path: PathBuf,
+        sync: bool,
+        reverse: bool,
+    ) -> Self {
         Self {
             host_alias,
             local_path,
             remote_path,
             sync,
+            reverse,
         }
     }
 
     fn sync(&self) -> Result<()> {
-        fs::create_dir_all(&self.local_path).context("Failed to create local filess directory")?;
+        fs::create_dir_all(&self.local_path).context("Failed to create local files directory")?;
 
         let temp_dir = tempfile::tempdir().context("Failed to create temporary directory")?;
         let temp_path = temp_dir.path();
 
-        println!("Syncing files from {}", self.host_alias);
+        if self.reverse {
+            println!("Syncing files to {}", self.host_alias);
+        } else {
+            println!("Syncing files from {}", self.host_alias);
+        }
 
         let remote_src = format!("{}:{}/", self.host_alias, self.remote_path.display());
 
@@ -73,6 +87,14 @@ impl FileSyncWorker {
             anyhow::bail!("Rsync failed with status: {status}");
         }
 
+        if self.reverse {
+            self.process_reverse_sync(temp_path)
+        } else {
+            self.process_normal_sync(temp_path)
+        }
+    }
+
+    fn process_normal_sync(&self, temp_path: &Path) -> Result<()> {
         let mut created = 0;
         let mut updated = 0;
         let mut unchanged = 0;
@@ -106,6 +128,57 @@ impl FileSyncWorker {
         Ok(())
     }
 
+    fn process_reverse_sync(&self, remote_temp_path: &Path) -> Result<()> {
+        let staging_dir = tempfile::tempdir().context("Failed to create staging directory")?;
+        let staging_path = staging_dir.path();
+
+        let mut created = 0;
+        let mut updated = 0;
+        let mut unchanged = 0;
+        let mut errors = 0;
+
+        let entries = fs::read_dir(&self.local_path).context("Failed to read local directory")?;
+
+        for entry in entries {
+            let entry = entry?;
+            let path = entry.path();
+
+            if path.is_file() {
+                match self.process_local_file(&path, remote_temp_path, staging_path) {
+                    Ok(FileStatus::Created) => created += 1,
+                    Ok(FileStatus::Updated) => updated += 1,
+                    Ok(FileStatus::Unchanged) => unchanged += 1,
+                    Err(_) => errors += 1,
+                }
+            }
+        }
+
+        println!("\nSync completed (Reverse):");
+        println!("  Created: {created}");
+        println!("  Updated: {updated}");
+        println!("  Unchanged: {unchanged}");
+        if errors > 0 {
+            println!("  Errors: {errors}");
+        }
+
+        if self.sync {
+            println!("Uploading to {}:{}/", self.host_alias, self.remote_path.display());
+            let remote_dest = format!("{}:{}/", self.host_alias, self.remote_path.display());
+            let status = Command::new("rsync")
+                .arg("-az")
+                .arg(format!("{}/", staging_path.display()))
+                .arg(&remote_dest)
+                .status()
+                .context("Failed to execute rsync upload")?;
+
+            if !status.success() {
+                anyhow::bail!("Rsync upload failed with status: {status}");
+            }
+        }
+
+        Ok(())
+    }
+
     fn process_files(&self, temp_file_path: &Path) -> Result<FileStatus> {
         let filename = temp_file_path
             .file_name()
@@ -118,6 +191,83 @@ impl FileSyncWorker {
         let remote_entries: Vec<String> = remote_content.lines().map(ToString::to_string).collect();
 
         self.merge_and_write(filename, remote_entries)
+    }
+
+    fn process_local_file(
+        &self,
+        local_file_path: &Path,
+        remote_temp_path: &Path,
+        staging_path: &Path,
+    ) -> Result<FileStatus> {
+        let filename = local_file_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .context("Invalid filename")?;
+
+        let local_content = fs::read_to_string(local_file_path)?;
+        let local_entries: Vec<String> = local_content.lines().map(ToString::to_string).collect();
+
+        let remote_file_path = remote_temp_path.join(filename);
+        let remote_exists = remote_file_path.exists();
+
+        let remote_entries = if remote_exists {
+            let c = fs::read_to_string(&remote_file_path)?;
+            c.lines().map(ToString::to_string).collect()
+        } else {
+            Vec::new()
+        };
+
+        let final_entries = if remote_exists {
+            Self::merge_entries(local_entries, remote_entries)
+        } else {
+            local_entries
+        };
+
+        let new_content = if final_entries.is_empty() {
+            String::new()
+        } else {
+            format!("{}\n", final_entries.join("\n"))
+        };
+
+        let original_remote_content = if remote_exists {
+            fs::read_to_string(&remote_file_path)?
+        } else {
+            String::new()
+        };
+
+        if original_remote_content == new_content {
+            return Ok(FileStatus::Unchanged);
+        }
+
+        if !self.sync {
+            println!("Diff for {filename} (Reverse):");
+            let diff = TextDiff::from_lines(&original_remote_content, &new_content);
+            for change in diff.iter_all_changes() {
+                let (sign, style) = match change.tag() {
+                    ChangeTag::Delete => ("-", style(change).red()),
+                    ChangeTag::Insert => ("+", style(change).green()),
+                    ChangeTag::Equal => (" ", style(change)),
+                };
+                print!("{sign}{style}");
+            }
+            return Ok(if remote_exists {
+                FileStatus::Updated
+            } else {
+                FileStatus::Created
+            });
+        }
+
+        // Write to staging
+        let staging_file = staging_path.join(filename);
+        fs::write(&staging_file, new_content)?;
+
+        if remote_exists {
+            println!("Updating: {filename}");
+            Ok(FileStatus::Updated)
+        } else {
+            println!("Creating: {filename}");
+            Ok(FileStatus::Created)
+        }
     }
 
     fn merge_and_write(&self, filename: &str, remote_entries: Vec<String>) -> Result<FileStatus> {
@@ -220,7 +370,7 @@ fn main() -> Result<()> {
             .context("--remote or --same-as-local must be specified")?
     };
 
-    let syncer = FileSyncWorker::new(cli.host, cli.local, remote, cli.sync);
+    let syncer = FileSyncWorker::new(cli.host, cli.local, remote, cli.sync, cli.reverse);
     syncer.sync()?;
 
     Ok(())
