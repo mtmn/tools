@@ -1,0 +1,17 @@
+# Ctrl+W
+KEY 17 DeletePrevWord
+
+# Ctrl+D
+KEY 4 Macro replace-todo-with-done
+
+# Ctrl+T
+KEY 14 insert-todo
+
+# Ctrl-P
+KEY 10 LineUp
+
+# Ctrl-N
+KEY E LineDown
+
+# Ctrl+K
+KEY B DeleteLine
