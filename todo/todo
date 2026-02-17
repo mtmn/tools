@@ -1,0 +1,15 @@
+#!/bin/sh
+
+alias ts='rg "^todo:" ~/todo.txt'
+
+tt() {
+	{
+		echo
+		date --rfc-3339=s
+	} >>~/todo.txt
+	ne + ~/todo.txt
+}
+
+te() {
+	ne + ~/todo.txt
+}
