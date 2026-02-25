@@ -37,6 +37,7 @@ crate.from_cargo(
         "//:gotcha/Cargo.toml",
         "//:hakunadata/Cargo.toml",
         "//:lastfm-csv-export/Cargo.toml",
+        "//:scores/Cargo.toml",
     ],
 )
 use_repo(crate, "crates")
