@@ -1,0 +1,6 @@
+[Unit]
+Description=Sync calendars and show upcoming events
+
+[Service]
+Type=oneshot
+ExecStart=/opt/tools/khal_notifier
