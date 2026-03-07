@@ -1,0 +1,134 @@
+---
+- name: Build podman from source
+  hosts: all
+  become: true
+  vars:
+    src_dir: /usr/local/src
+    go_path: /usr/local/go
+
+    runc_version: v1.2.0
+    go_version: 1.25.6
+
+  tasks:
+    - name: Install dependencies
+      ansible.builtin.apt:
+        name:
+          - gcc
+          - make
+          - git
+          - curl
+          - pkg-config
+          - btrfs-progs
+          - iptables
+          - libassuan-dev
+          - libbtrfs-dev
+          - libc6-dev
+          - libdevmapper-dev
+          - libglib2.0-dev
+          - libgpgme-dev
+          - libgpg-error-dev
+          - libprotobuf-dev
+          - libprotobuf-c-dev
+          - libseccomp-dev
+          - libselinux1-dev
+          - libsystemd-dev
+          - libapparmor-dev
+          - uidmap
+          - go-md2man
+          - netavark
+          - passt
+          - fuse-overlayfs
+          - golang-go
+        state: present
+        update_cache: yes
+
+    - name: Ensure source directory exists
+      ansible.builtin.file:
+        path: "{{ src_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Download and unarchive golang
+      ansible.builtin.unarchive:
+        src: "https://go.dev/dl/go{{ go_version }}.linux-amd64.tar.gz"
+        dest: /usr/local
+        remote_src: yes
+        creates: "{{ go_path }}/bin/go"
+
+    - name: Link golang to /usr/local/bin
+      ansible.builtin.file:
+        src: "{{ go_path }}/bin/{{ item }}"
+        dest: "/usr/local/bin/{{ item }}"
+        state: link
+      loop:
+        - go
+        - gofmt
+
+    - name: Clone conmon repository
+      ansible.builtin.git:
+        repo: https://github.com/containers/conmon
+        dest: "{{ src_dir }}/conmon"
+        force: yes
+
+    - name: Build conmon
+      ansible.builtin.shell:
+        cmd: |
+          make
+          make podman
+        chdir: "{{ src_dir }}/conmon"
+      environment:
+        PATH: "/usr/local/bin:{{ ansible_facts['env']['PATH'] }}"
+        GOCACHE: "/tmp/gocache-conmon"
+
+    - name: Clone runc repository
+      ansible.builtin.git:
+        repo: https://github.com/opencontainers/runc.git
+        dest: "{{ src_dir }}/runc"
+        version: "{{ runc_version }}"
+        force: yes
+
+    - name: Build runc
+      ansible.builtin.shell:
+        cmd: |
+          make BUILDTAGS="selinux seccomp"
+          cp runc /usr/bin/runc
+        chdir: "{{ src_dir }}/runc"
+      environment:
+        PATH: "/usr/local/bin:{{ ansible_facts['env']['PATH'] }}"
+
+    - name: Clone podman repository
+      ansible.builtin.git:
+        repo: https://github.com/containers/podman.git
+        dest: "{{ src_dir }}/podman"
+        force: yes
+
+    - name: Build podman
+      ansible.builtin.command:
+        cmd: make BUILDTAGS="selinux seccomp" PREFIX=/usr
+        chdir: "{{ src_dir }}/podman"
+      environment:
+        PATH: "/usr/local/bin:{{ ansible_facts['env']['PATH'] }}"
+
+    - name: Install podman
+      ansible.builtin.command:
+        cmd: make install PREFIX=/usr
+        chdir: "{{ src_dir }}/podman"
+      environment:
+        PATH: "/usr/local/bin:{{ ansible_facts['env']['PATH'] }}"
+
+    - name: Create /etc/containers directory
+      ansible.builtin.file:
+        path: /etc/containers
+        state: directory
+
+    - name: Download registries.conf
+      ansible.builtin.get_url:
+        url: https://raw.githubusercontent.com/containers/image/main/registries.conf
+        dest: /etc/containers/registries.conf
+        force: no
+
+    - name: Download policy.json
+      ansible.builtin.get_url:
+        url: https://raw.githubusercontent.com/containers/image/main/default-policy.json
+        dest: /etc/containers/policy.json
+        force: no
