@@ -11,4 +11,5 @@ py_binary(
 local_deploy(
     name = "deploy",
     srcs = [":f2aif"],
+    copy_runfiles = True,
 )

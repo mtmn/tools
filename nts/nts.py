@@ -79,7 +79,7 @@ class NTSTracklistFetcher:
         tracklist = cast(list[dict[str, Any]], tracklist_container.get('results', []))
 
         if not tracklist:
-            print("No tracks found in this episode", file=sys.stderr)
+            print('No tracks found in this episode', file=sys.stderr)
             return
 
         with open(filename, 'w', encoding='utf-8') as f:

@@ -184,4 +184,3 @@ fn write_csv(path: &str, tracks: &[Track]) -> Result<(), Box<dyn Error>> {
     writer.flush()?;
     Ok(())
 }
-

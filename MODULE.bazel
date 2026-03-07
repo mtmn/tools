@@ -2,14 +2,26 @@ module(
     name = "tools",
 )
 
+bazel_dep(name = "hermetic_cc_toolchain", version = "4.1.0")
+bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_cc", version = "0.2.16")
+bazel_dep(name = "rules_zig", version = "0.12.3")
 bazel_dep(name = "rules_rust", version = "0.68.1")
 bazel_dep(name = "rules_shell", version = "0.6.1")
 bazel_dep(name = "rules_python", version = "1.8.1")
 bazel_dep(name = "bazel_skylib", version = "1.9.0")
 
+# https://github.com/uber/hermetic_cc_toolchain
+toolchains = use_extension("@hermetic_cc_toolchain//toolchain:ext.bzl", "toolchains")
+use_repo(toolchains, "zig_sdk")
+
+register_toolchains(
+    "@hermetic_cc_toolchain//toolchain:all",
+)
+
 # https://github.com/bazelbuild/rules_rust
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
+
 crate = use_extension("@rules_rust//crate_universe:extension.bzl", "crate")
 
 rust.toolchain(
@@ -19,8 +31,8 @@ rust.toolchain(
         "-Ctarget-cpu=native",
         "-Clink-arg=-fuse-ld=mold",
     ],
-    versions = ["nightly/2026-01-20"],
     extra_target_triples = [],
+    versions = ["nightly/2026-03-07"],
 )
 use_repo(rust, "rust_toolchains")
 
@@ -34,7 +46,6 @@ crate.from_cargo(
     manifests = [
         "//:alafont/Cargo.toml",
         "//:diffamer/Cargo.toml",
-        "//:gotcha/Cargo.toml",
         "//:hakunadata/Cargo.toml",
         "//:lastfm-csv-export/Cargo.toml",
     ],
@@ -43,6 +54,7 @@ use_repo(crate, "crates")
 
 # https://github.com/bazel-contrib/rules_python
 python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+
 pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
 
 python.toolchain(
@@ -55,3 +67,10 @@ pip.parse(
     requirements_lock = "//:requirements.out",
 )
 use_repo(pip, "pypi")
+
+# https://github.com/aherrmann/rules_zig
+zig = use_extension("@rules_zig//zig:extensions.bzl", "zig")
+zig.toolchain(zig_version = "0.15.2")
+
+ntsgui_deps = use_extension("//ntsgui:extension.bzl", "ntsgui_deps")
+use_repo(ntsgui_deps, "ntsgui_raylib", "ntsgui_raylib_nuklear", "ntsgui_raylib_zig")

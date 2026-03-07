@@ -11,4 +11,5 @@ py_binary(
 local_deploy(
     name = "deploy",
     srcs = [":shuffle"],
+    copy_runfiles = True,
 )

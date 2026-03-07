@@ -14,4 +14,5 @@ py_binary(
 local_deploy(
     name = "deploy",
     srcs = [":nts"],
+    copy_runfiles = True,
 )

@@ -7,19 +7,19 @@ from pathlib import Path
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="picks and plays random albums in mpd")
-    _ = parser.add_argument("file", type=Path)
+    parser = argparse.ArgumentParser(description='picks and plays random albums in mpd')
+    _ = parser.add_argument('file', type=Path)
     _ = parser.add_argument(
-        "-n",
-        "--number",
+        '-n',
+        '--number',
         type=int,
-        help="number of random albums (default: 5)",
+        help='number of random albums (default: 5)',
     )
     _ = parser.add_argument(
-        "-d",
-        "--depth",
+        '-d',
+        '--depth',
         type=int,
-        help="minimum path depth to include (default: 0)",
+        help='minimum path depth to include (default: 0)',
     )
 
     class Arguments(argparse.Namespace):
@@ -33,10 +33,10 @@ def main() -> None:
         lines = [line.strip() for line in f if line.strip()]
 
     if args.depth > 0:
-        lines = [line for line in lines if line.count("/") >= args.depth]
+        lines = [line for line in lines if line.count('/') >= args.depth]
 
     if not lines:
-        print("file is empty or no lines match depth criteria", file=sys.stderr)
+        print('file is empty or no lines match depth criteria', file=sys.stderr)
         sys.exit(1)
 
     n: int = min(args.number, len(lines))
@@ -45,14 +45,14 @@ def main() -> None:
     for line in selected:
         print(f"  → {line}")
         try:
-            result = subprocess.run(["mpc", "add", line], check=True)
+            result = subprocess.run(['mpc', 'add', line], check=True)
             _ = result
         except subprocess.CalledProcessError as e:
             print(f"error adding '{line}': {e}", file=sys.stderr)
         except OSError:
-            print("mpc not found", file=sys.stderr)
+            print('mpc not found', file=sys.stderr)
             sys.exit(1)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

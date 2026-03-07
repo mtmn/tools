@@ -1,0 +1,21 @@
+.{
+    .name = .ntsgui,
+    .version = "0.0.1",
+    .fingerprint = 0xdd5a0f1e53f499dd,
+    .minimum_zig_version = "0.15.2",
+    .dependencies = .{
+        .raylib_zig = .{
+            .url = "https://github.com/raylib-zig/raylib-zig/archive/devel.tar.gz",
+            .hash = "raylib_zig-5.6.0-dev-KE8REENOBQC-m5nK7M2b5aKSIubJPbPLUYcRhT7aT3RN",
+        },
+        .@"raylib-nuklear" = .{
+            .url = "https://github.com/RobLoach/raylib-nuklear/archive/master.tar.gz",
+            .hash = "N-V-__8AANT9HQAK4wZOfNqmt2vtvTSWFdIxXqddWZcnpgiU",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}

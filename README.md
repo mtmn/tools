@@ -1,7 +1,7 @@
 # tools
 I wanted to learn about [Bazel](https://bazel.build) but instead got addicted to watching my builds exit out with nothingburger error messages, one at a time.
 
-It was as if I was tilting in a high stakes poker game but instead of money I lost my sanity. And a lot of time. 
+It was as if I was tilting in a high stakes poker game but instead of money I lost my sanity. And a lot of time.
 
 ![](misc/hehe.png)
 
@@ -26,7 +26,7 @@ bazel query "kind('sh_binary', //...)"
 bazel build //hakunadata
 ```
 
-### deploy 
+### deploy
 > `bazel-bin` -> ``/opt/bazel-tools``
 ```bash
 sudo install -d -m 700 -o $USER /opt/bazel-tools

@@ -16,4 +16,5 @@ py_binary(
 local_deploy(
     name = "deploy",
     srcs = [":lazymaster"],
+    copy_runfiles = True,
 )

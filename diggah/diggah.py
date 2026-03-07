@@ -15,7 +15,7 @@ class DateCalculator:
     @staticmethod
     def validate_date(date_str: str) -> datetime:
         try:
-            return datetime.strptime(date_str, "%Y-%m-%d")
+            return datetime.strptime(date_str, '%Y-%m-%d')
         except ValueError:
             raise ValueError(f"'{date_str}' is incorrent, please use YYYY-MM-DD")
 
@@ -59,7 +59,7 @@ class FileSystemSearcher:
         start_ts: float | None,
         end_ts: float | None,
         include_files: bool = False,
-        root: str = ".",
+        root: str = '.',
     ):
         """
         Yields paths of items modified between start_ts and end_ts (inclusive).
@@ -104,41 +104,41 @@ class RemoteExecutor:
         """
         username = None
         hostname = host_str
-        if "@" in host_str:
-            username, hostname = host_str.split("@", 1)
+        if '@' in host_str:
+            username, hostname = host_str.split('@', 1)
 
         # Load SSH config
         ssh_config = paramiko.SSHConfig()
-        user_config_file = os.path.expanduser("~/.ssh/config")
+        user_config_file = os.path.expanduser('~/.ssh/config')
         if os.path.exists(user_config_file):
             with open(user_config_file) as f:
                 ssh_config.parse(f)
 
         user_config = ssh_config.lookup(hostname)
 
-        if "hostname" in user_config:
-            hostname = user_config["hostname"]
+        if 'hostname' in user_config:
+            hostname = user_config['hostname']
 
-        if username is None and "user" in user_config:
-            username = user_config["user"]
+        if username is None and 'user' in user_config:
+            username = user_config['user']
 
-        port = int(user_config.get("port", 22))
-        key_filename = user_config.get("identityfile")
+        port = int(user_config.get('port', 22))
+        key_filename = user_config.get('identityfile')
 
-        cmd_parts = ["find", path]
+        cmd_parts = ['find', path]
 
         if not include_files:
-            cmd_parts.extend(["-type", "d"])
+            cmd_parts.extend(['-type', 'd'])
 
         if start_dt:
-            start_str = start_dt.strftime("%Y-%m-%d %H:%M:%S")
-            cmd_parts.extend(["-newermt", f"'{start_str}'"])
+            start_str = start_dt.strftime('%Y-%m-%d %H:%M:%S')
+            cmd_parts.extend(['-newermt', f"'{start_str}'"])
 
         if end_dt:
-            end_str = end_dt.strftime("%Y-%m-%d %H:%M:%S")
-            cmd_parts.extend(["!", "-newermt", f"'{end_str}'"])
+            end_str = end_dt.strftime('%Y-%m-%d %H:%M:%S')
+            cmd_parts.extend(['!', '-newermt', f"'{end_str}'"])
 
-        cmd = " ".join(cmd_parts)
+        cmd = ' '.join(cmd_parts)
 
         client = paramiko.SSHClient()
         client.load_system_host_keys()
@@ -146,8 +146,8 @@ class RemoteExecutor:
 
         try:
             sock = None
-            if "proxycommand" in user_config:
-                sock = paramiko.ProxyCommand(user_config["proxycommand"])
+            if 'proxycommand' in user_config:
+                sock = paramiko.ProxyCommand(user_config['proxycommand'])
 
             client.connect(
                 hostname=hostname,
@@ -167,7 +167,7 @@ class RemoteExecutor:
                     yield line_str
 
             for line in cast(Iterable[str], stderr):
-                print(str(line), end="", file=sys.stderr)
+                print(str(line), end='', file=sys.stderr)
 
             exit_status = stdout.channel.recv_exit_status()
             if exit_status != 0:
@@ -195,7 +195,7 @@ class Diggah:
         today: bool = False,
         files: bool = False,
         all: bool = False,
-        path: str = ".",
+        path: str = '.',
         dry_run: bool = False,
         host: str | None = None,
         relative: bool = False,
@@ -228,7 +228,7 @@ class Diggah:
         )
 
         if not ranges:
-            fire.Fire(self.search, command=["--help"], name="diggah search")
+            fire.Fire(self.search, command=['--help'], name='diggah search')
             return
 
         for start_dt, end_dt, outfile in ranges:
@@ -260,13 +260,13 @@ class Diggah:
 
         if all_time:
             if any([today, year, start_date, end_date]):
-                raise ValueError("cannot combine with other time constraints")
-            outfile = custom_outfile or ("all.txt" if output else None)
+                raise ValueError('cannot combine with other time constraints')
+            outfile = custom_outfile or ('all.txt' if output else None)
             ranges.append((None, None, outfile))
 
         elif today:
             if start_date or year:
-                raise ValueError("cannot combine with specific dates")
+                raise ValueError('cannot combine with specific dates')
             now = datetime.now()
             start_dt = now - timedelta(days=1)
             end_dt = now
@@ -282,7 +282,7 @@ class Diggah:
         if year is not None:
             year = int(year)
             if start_date:
-                raise ValueError("cannot combine with positional dates")
+                raise ValueError('cannot combine with positional dates')
 
             if month is None:
                 # Year only
@@ -342,11 +342,11 @@ class Diggah:
         print(f"Include Files: {include_files}")
         if host:
             print(f"Host:          {host}")
-            print("Mode:          Remote (find command)")
+            print('Mode:          Remote (find command)')
         else:
-            print("Mode:          Local (python walk)")
+            print('Mode:          Local (python walk)')
         if relative:
-            print("Output:        Relative paths")
+            print('Output:        Relative paths')
         if output:
             print(f"Write to:      {outfile}")
 
@@ -378,7 +378,7 @@ class Diggah:
         f = None
         if outfile:
             try:
-                f = open(outfile, "w")
+                f = open(outfile, 'w')
                 print(f"{outfile}")
             except IOError as e:
                 print(f"opening output file: {e} failed", file=sys.stderr)
@@ -390,7 +390,7 @@ class Diggah:
                     item = os.path.relpath(item, start=path)
 
                 if f:
-                    _ = f.write(item + "\n")
+                    _ = f.write(item + '\n')
                 else:
                     print(item)
         finally:
@@ -406,5 +406,5 @@ def main():
         sys.exit(1)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

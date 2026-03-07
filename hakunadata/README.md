@@ -4,7 +4,7 @@
 
 ## Usage
 
-### Fetching metadata for an artist and album
+### Fetching metadata for an artist and album (proposal only)
 
 ```bash
 hakunadata --artist 'The Beatles' --album 'Abbey Road'
@@ -31,7 +31,7 @@ hakunadata --write file.flac
 You can also provide a directory path to process all supported audio files (`.flac`, `.mp3`, `.ogg`, `.m4a`) within that directory and its subdirectories.
 
 ```bash
-# Show remote tags for all files in a directory
+# Show proposed tags for all files in a directory
 hakunadata --read /path/to/music
 
 # Write tags for all files in a directory

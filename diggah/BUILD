@@ -1,5 +1,5 @@
-load("//bazel:local-deploy.bzl", "local_deploy")
 load("@rules_python//python:defs.bzl", "py_binary")
+load("//bazel:local-deploy.bzl", "local_deploy")
 
 py_binary(
     name = "diggah",
@@ -15,4 +15,5 @@ py_binary(
 local_deploy(
     name = "deploy",
     srcs = [":diggah"],
+    copy_runfiles = True,
 )

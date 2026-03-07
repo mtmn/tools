@@ -1,5 +1,5 @@
 {
-    "reportMissingTypeStubs": true,
-    "reportUnknownMemberType": true,
-    "reportUnknownVariableType": true
+	"reportMissingTypeStubs": true,
+	"reportUnknownMemberType": true,
+	"reportUnknownVariableType": true
 }
